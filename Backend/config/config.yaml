@@ -1,0 +1,14 @@
+logger:
+  level: "local"
+server:
+  address: ":8081"
+  timeout: 4s
+  iddle_timeout: 60s
+  shutdown_timeout: 10s
+db:
+  host: "postgres_db"
+  port: 5432
+  username: "postgres"
+  name: "ping_service"
+  password: "postgres"
+secret: "secret_key"

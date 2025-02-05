@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Blog</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <a class="page-link" href="/login">Login</a>
+    <img height="300" width="300" src="/img/amazing_logo.png" alt="Amazing logo">
+<ul>
+    {{ range .Response }}
+    <li>
+        <div>{{.Article_name}}</div>
+        <div>{{.Article_content}}</div>
+    </li>
+    {{end}}
+</ul>
+{{if gt .Page 1}}
+<a href="?page={{sub .Page  1}}">Previous</a>
+{{end}}
+
+{{if lt .Page .Last}}
+<a href="?page={{sum .Page  1}}">Next</a>
+{{end}}
+<a href="?page={{.Last}}">Last</a>
+</body>
+</html>
