@@ -1,14 +1,13 @@
 package model
 
 import (
-	"net"
 	"time"
 )
 
 type Address struct {
-	IP                 net.IP    `json:"ip"`
+	IP                 string    `json:"ip"`
 	LastSuccessfulPing time.Time `json:"last_successful_ping"`
-	ResponseTime       uint      `json:"response_time"`
+	ResponseTime       string    `json:"response_time"`
 }
 
 type GetAddressListResponse struct {
@@ -30,4 +29,13 @@ type GetAddressListRequest struct {
 
 type SetAddressListRequest struct {
 	Addresses []Address `json:"addresses"`
+}
+
+type ErrorClient struct {
+	Error string `json:"message"`
+}
+
+type ErrorInternal struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
 }

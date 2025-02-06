@@ -2,29 +2,54 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Blog</title>
+    <title>Ping</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 
 <body>
-    <a class="page-link" href="/login">Login</a>
-    <img height="300" width="300" src="/img/amazing_logo.png" alt="Amazing logo">
-<ul>
-    {{ range .Response }}
-    <li>
-        <div>{{.Article_name}}</div>
-        <div>{{.Article_content}}</div>
-    </li>
-    {{end}}
-</ul>
-{{if gt .Page 1}}
-<a href="?page={{sub .Page  1}}">Previous</a>
-{{end}}
+    <table>
+        <thead>
+            <tr>
+                <th>IP</th>
+                <th>Response Time</th>
+                <th>Last Successful Ping</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Addresses }}
+            <tr>
+                <td>{{ .IP }}</td>
+                <td>{{ .ResponseTime }}</td>
+                <td>{{ .LastSuccessfulPing }}</td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
 
-{{if lt .Page .Last}}
-<a href="?page={{sum .Page  1}}">Next</a>
-{{end}}
-<a href="?page={{.Last}}">Last</a>
+    <div>
+        {{ if gt .Page 1 }}
+        <a href="?page={{ sub .Page 1 }}">Previous</a>
+        {{ end }}
+
+        {{ if lt .Page .Last }}
+        <a href="?page={{ sum .Page 1 }}">Next</a>
+        {{ end }}
+        <a href="?page={{ .Last }}">Last</a>
+    </div>
 </body>
 </html>

@@ -1,61 +1,64 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 
-	"main/config"
-	"main/internal/models"
-	"main/internal/repository"
+	"backend/internal/http/handler/model"
 )
 
 const (
 	Limit = 3
 )
 
-type Usecase struct {
-	pgPepo repository.Repository
-}
-
 type UseCase interface {
-	GetArticle(models.GetArticleRequest) (models.GetArticleResponse, error)
-	SetArticle(models.SetArticleRequest) error
+	CreatePing(ctx context.Context, req model.Address) (*model.Address, error)
+	GetPing(ctx context.Context, req model.GetAddressListRequest) (*model.GetAddressListResponse, error)
+	GetNumber() (int, error)
 }
 
-func NewUsecase(pgPepo repository.Repository) UseCase {
+type Usecase struct {
+	pgPepo UseCase
+}
+
+func New(pgPepo UseCase) UseCase {
 	return &Usecase{pgPepo: pgPepo}
 }
 
-func (u *Usecase) GetArticle(req models.GetArticleRequest) (models.GetArticleResponse, error) {
-	var article models.GetArticleResponse
-	n, err := u.pgPepo.GetNumber()
+func (u *Usecase) GetPing(ctx context.Context, req model.GetAddressListRequest) (*model.GetAddressListResponse, error) {
+	var pings *model.GetAddressListResponse
+	n, err := u.GetNumber()
 	if err != nil {
-		return article, err
+		return pings, err
 	}
 
 	req.Limit = Limit
+
 	req.Ofset = req.Limit * (req.Page - 1)
 
 	if (req.Page == 0) || (req.Page > getLast(n, req.Limit)) {
-		return article, errors.New("Invalid page")
+		return pings, errors.New("Invalid page")
 	}
 
-	article, err = u.pgPepo.GetArticle(req)
+	pings, err = u.pgPepo.GetPing(ctx, req)
 	if err != nil {
-		return article, err
+		return pings, err
 	}
 
-	article.Last = getLast(n, req.Limit)
-	article.Page = req.Page
+	// fmt.Println(req.Page, getLast(n, req.Limit))
 
-	return article, nil
+	pings.Last = getLast(n, req.Limit)
+	pings.Page = req.Page
+
+	return pings, nil
 }
 
-func (u *Usecase) SetArticle(req models.SetArticleRequest) error {
-	err := u.pgPepo.SetArticle(req)
+func (u *Usecase) CreatePing(ctx context.Context, req model.Address) (*model.Address, error) {
+	resp, err := u.pgPepo.CreatePing(ctx, req)
 	if err != nil {
-		return err
+		return resp, err
 	}
-	return nil
+	return resp, nil
 }
 
 func getLast(n int, lim int) int {
@@ -65,7 +68,11 @@ func getLast(n int, lim int) int {
 	return n / lim
 }
 
-func Authorization(login string, password string) bool {
-	config, _ := config.LoadConfig()
-	return login == config.AdminName && password == config.AdminPassword
+func (u *Usecase) GetNumber() (int, error) {
+	return u.pgPepo.GetNumber()
 }
+
+// func Authorization(login string, password string) bool {
+// 	config, _ := config.LoadConfig()
+// 	return login == config.AdminName && password == config.AdminPassword
+// }

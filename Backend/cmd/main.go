@@ -13,23 +13,20 @@ import (
 	"backend/internal/http/server"
 	"backend/internal/logger"
 	"backend/internal/repository"
-	"backend/internal/service/ping"
-	"backend/pkg/postgres"
+	"backend/internal/usecase"
 )
 
 const (
 	shutdownTimeout = 5 * time.Second
 )
 
-func init() {
-	postgres.MigrateDB()
-}
-
 func main() {
 	configPath := flag.String("config", "config/config.yaml", "config file path")
 	flag.Parse()
 
 	cfg := config.ParseConfig(*configPath)
+
+	// fmt.Println(*cfg)
 
 	logger.MustInit(cfg.Logger.Level)
 
@@ -42,7 +39,7 @@ func main() {
 
 	repo := repository.New(pg)
 
-	pingReportService := ping.New(repo)
+	pingReportService := usecase.New(repo)
 
 	hnd := handler.New(pingReportService)
 

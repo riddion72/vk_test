@@ -9,13 +9,19 @@ import (
 	_ "github.com/lib/pq"
 
 	"backend/internal/config"
-	"backend/internal/domain"
+	"backend/internal/http/handler/model"
 )
 
 const (
 	col1 string = "article_name"
 	col2 string = "article_content"
 )
+
+// type Repository interface {
+// 	CreatePing(ctx context.Context, req model.Address) (*model.Address, error)
+// 	GetPing(ctx context.Context, req model.GetAddressListRequest) (*model.GetAddressListResponse, error)
+// 	GetNumber() (int, error)
+// }
 
 type pgRepo struct {
 	db *sqlx.DB
@@ -37,12 +43,13 @@ func NewConnection(ctx context.Context, cfg config.DB) (*sqlx.DB, error) {
 	return db, nil
 }
 
-func (r *pgRepo) CreatePing(ctx context.Context, address, time, latestData string) (*domain.Address, error) {
+func (r *pgRepo) CreatePing(ctx context.Context, req model.Address) (*model.Address, error) {
 
-	res := &domain.Address{}
+	res := &model.Address{}
+	var id int
 
-	err := r.db.QueryRowxContext(ctx, querySetPing, address, time, latestData).
-		Scan(&res.Id, &res.IP, &res.ResponseTime, &res.LastSuccessfulPing)
+	err := r.db.QueryRowxContext(ctx, querySetPing, req.IP, req.ResponseTime, req.LastSuccessfulPing).
+		Scan(&id, &res.IP, &res.ResponseTime, &res.LastSuccessfulPing)
 	if err != nil {
 		return nil, err
 	}
@@ -50,32 +57,34 @@ func (r *pgRepo) CreatePing(ctx context.Context, address, time, latestData strin
 	return res, nil
 }
 
-func (r *pgRepo) GetArticle(req models.GetArticleRequest) (models.GetArticleResponse, error) {
-	var article models.GetArticleResponse
-	id := ""
+func (r *pgRepo) GetPing(ctx context.Context, req model.GetAddressListRequest) (*model.GetAddressListResponse, error) {
 
-	row, err := r.db.Query(queryGetArticle, req.Limit, req.Ofset)
+	rows, err := r.db.QueryContext(ctx, queryGetPing, req.Limit, req.Ofset)
 	if err != nil {
-		log.Println("Error getting")
-		return article, err
+		return nil, err
 	}
 
-	defer row.Close()
+	pings := make([]model.Address, 0, req.Limit)
 
-	for i := 0; i < req.Limit && row.Next(); i++ {
+	pingList := model.GetAddressListResponse{Addresses: pings}
 
-		var articleItem models.Article = models.Article{Article_name: "", Article_content: ""}
-
-		err := row.Scan(&id, &articleItem.Article_name, &articleItem.Article_content)
+	for rows.Next() {
+		var ping model.Address
+		var id int
+		err = rows.Scan(&id, &ping.IP, &ping.ResponseTime, &ping.LastSuccessfulPing)
 		if err != nil {
-			log.Println("Error scanning")
-			return article, err
+			return nil, err
 		}
-		article.Response = append(article.Response, articleItem)
+		pingList.Addresses = append(pingList.Addresses, ping)
 	}
 
-	return article, nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &pingList, nil
 }
+
 func (r *pgRepo) GetNumber() (int, error) {
 	var number int
 
