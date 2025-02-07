@@ -182,37 +182,79 @@
 //		// 	fmt.Println("Error updating addresses:", err)
 //		// }
 //	}
+
 package main
 
 import (
 	"context"
 	"fmt"
+	"net"
+	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 )
 
 func main() {
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewClientWithOpts(
+		client.FromEnv,
+		client.WithVersion("1.41"),
+	)
 	if err != nil {
 		panic(err)
 	}
 
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
+	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{
+		Filters: filters.NewArgs(filters.Arg("status", "running")),
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	for _, container := range containers {
-		containerJSON, err := cli.ContainerInspect(ctx, container.ID)
+	for _, c := range containers {
+		inspect, err := cli.ContainerInspect(context.Background(), c.ID)
 		if err != nil {
-			fmt.Printf("Error inspecting container %s: %v\n", container.ID, err)
+			fmt.Printf("Error inspecting %s: %v\n", c.ID[:12], err)
 			continue
 		}
-		for networkName, network := range containerJSON.NetworkSettings.Networks {
-			fmt.Printf("Container ID: %s, Names: %v, Network: %s, IP Address: %s\n",
-				container.ID, container.Names, networkName, network.IPAddress)
+
+		// Получаем все IP-адреса контейнера
+		var ips []string
+		for _, net := range inspect.NetworkSettings.Networks {
+			ips = append(ips, net.IPAddress)
+		}
+
+		if len(ips) == 0 {
+			fmt.Printf("%s: No IP addresses found\n", c.Names[0])
+			continue
+		}
+
+		// Получаем первый экспознутый порт
+		exposedPorts := inspect.Config.ExposedPorts
+		if len(exposedPorts) == 0 {
+			fmt.Printf("%s: No exposed ports\n", c.Names[0])
+			continue
+		}
+		var firstPort string
+		for port := range exposedPorts {
+			firstPort = port.Port()
+			break
+		}
+
+		// Для каждого IP измеряем время подключения
+		for _, ip := range ips {
+			target := fmt.Sprintf("%s:%s", ip, firstPort)
+			start := time.Now()
+			conn, err := net.DialTimeout("tcp", target, 2*time.Second)
+			duration := time.Since(start)
+
+			if err != nil {
+				fmt.Printf("%s %d (timeout) %v\n", ip, duration.Milliseconds(), err)
+				continue
+			}
+			conn.Close()
+			fmt.Printf("%s %d\n", ip, duration.Milliseconds())
 		}
 	}
 }

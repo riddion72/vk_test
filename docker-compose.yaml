@@ -21,5 +21,13 @@ services:
       - postgres-service
     restart: on-failure
 
-  pinger:
+  docker-pinger:
     build: ./pinger
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DOCKER_API_VERSION: 1.41 
+    privileged: true
+    depends_on:
+      - backend
+    restart: on-failure
