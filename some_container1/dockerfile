@@ -1,0 +1,7 @@
+FROM alpine:latest
+
+LABEL description="A container that prints in an infinite loop"
+
+EXPOSE 9990
+
+CMD while true; do echo "Hello VK"; sleep 1; done

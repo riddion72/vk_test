@@ -31,3 +31,10 @@ services:
     depends_on:
       - backend
     restart: on-failure
+
+  some_container:
+    image: alpine:latest
+    container_name: container
+    build: ./some_container1
+    ports:
+      - "9990:9990"
