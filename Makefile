@@ -6,7 +6,7 @@ build:
 
 run:
 	docker-compose up -d
-	docker run -d --name container2 --network shared-network --rm container2
+	docker run -d --name container2 -p 9876:80 --rm container2
 
 restart:
 	docker-compose down -v
