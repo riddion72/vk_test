@@ -1,0 +1,4 @@
+logger:
+  level: 5
+server:
+  address: "http://backend:8081/put_address"

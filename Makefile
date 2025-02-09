@@ -1,18 +1,20 @@
 all: build run
 
 build:
-	docker build -t container2 ./some_container2
 	docker-compose build --no-cache
+	docker build -t container2 ./some_container2
 
 run:
-	docker run --name container2 -d -t -i container2
 	docker-compose up -d
+	docker run -d --name container2 --network shared-network --rm container2
 
 restart:
 	docker-compose down -v
+	docker rm -f container2 || true
 	docker-compose build --no-cache
 	docker-compose up -d
 
 stop:
 	docker-compose down -v
-	docker stop container2
+	docker stop container2 || true
+

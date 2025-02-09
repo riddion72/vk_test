@@ -47,13 +47,19 @@ func (r *pgRepo) CreatePing(ctx context.Context, req model.Address) (*model.Addr
 
 	res := &model.Address{}
 	var id int
+	var err error
 
-	err := r.db.QueryRowxContext(ctx, querySetPing, req.IP, req.ResponseTime, req.LastSuccessfulPing).
-		Scan(&id, &res.IP, &res.ResponseTime, &res.LastSuccessfulPing)
+	if req.ResponseTime == "no answer" {
+		err = r.db.QueryRowxContext(ctx, querySetNoAnswer, req.IP, req.ResponseTime).
+			Scan(&id, &res.IP, &res.ResponseTime)
+	} else {
+		err = r.db.QueryRowxContext(ctx, querySetPing, req.IP, req.ResponseTime, req.LastSuccessfulPing).
+			Scan(&id, &res.IP, &res.ResponseTime, &res.LastSuccessfulPing)
+
+	}
 	if err != nil {
 		return nil, err
 	}
-
 	return res, nil
 }
 

@@ -12,6 +12,8 @@ services:
       - "5432:5432"
     volumes:
       - ./backend/scripts/create_tabel.sql:/docker-entrypoint-initdb.d/create_tabel.sql
+    networks:
+      - shared-network
 
   backend:
     build: ./backend
@@ -20,6 +22,8 @@ services:
     depends_on:
       - postgres-service
     restart: on-failure
+    networks:
+      - shared-network
 
   docker-pinger:
     build: ./pinger
@@ -31,10 +35,16 @@ services:
     depends_on:
       - backend
     restart: on-failure
+    networks:
+      - shared-network
 
   some_container:
-    image: alpine:latest
-    container_name: container
     build: ./some_container1
     ports:
-      - "9990:9990"
+      - "9090:80"
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    driver: bridge

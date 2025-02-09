@@ -14,13 +14,12 @@ import (
 	"syscall"
 	"time"
 
+	"main/internal/config"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
-)
-
-const (
-	url = "http://backend:8081/put_address"
+	"github.com/sirupsen/logrus"
 )
 
 type Address struct {
@@ -33,15 +32,17 @@ type AddressList struct {
 	Addresses []Address `json:"addresses"`
 }
 
+var cnfg *config.Config
+
 func pingAddress(address string) error {
 	var answer []Address
 	ping := time.Now()
 	conn, err := net.DialTimeout("tcp", address, 2*time.Second)
 	duration := time.Since(ping)
 	if err != nil {
-		fmt.Printf("%s %d (timeout) %v\n", address, duration.Milliseconds(), err)
+		logrus.Warnf("%s %d (timeout) %v\n", address, duration.Milliseconds(), err)
 		answer = []Address{{
-			ResponseTime: "not answer",
+			ResponseTime: "no answer",
 		}}
 	} else {
 		conn.Close()
@@ -56,11 +57,11 @@ func pingAddress(address string) error {
 	var answerList AddressList
 	answerList.Addresses = answer
 
-	if err := updateAddresses(url, answerList); err != nil {
-		fmt.Println("Error updating addresses:", err)
+	if err := updateAddresses(cnfg.Address, answerList); err != nil {
+		logrus.Errorln("Error updating addresses:", err)
 	}
 
-	fmt.Printf("%s %d %v\n", address, duration.Milliseconds(), time.Now().Format(time.RFC3339))
+	logrus.Debugf("%s %d %v\n", address, duration.Milliseconds(), time.Now().Format(time.RFC3339))
 	return nil
 }
 
@@ -81,27 +82,24 @@ func updateAddresses(address string, addressList AddressList) error {
 }
 
 func worker(id int, jobs <-chan string, wg *sync.WaitGroup, ctx context.Context) {
-	fmt.Println("worker", id, "starting")
+	logrus.Infoln("worker", id, "starting")
 	defer wg.Done()
-	// time.Sleep(time.Second)
 	for {
 		select {
 		case <-ctx.Done():
-			// t := time.NewTimer(time.Second * time.Duration(rand.Intn(10)))
-			// <-t.C
-			fmt.Println("worker", id, "cancelled")
+
+			logrus.Infoln("worker", id, "cancelled")
 			return
 		case url, ok := <-jobs:
 			if !ok {
-				fmt.Println("worker", id, "finished")
+				logrus.Infoln("worker", id, "finished")
 				return
 			}
-			fmt.Println("worker", id, "take", url)
+			logrus.Debugln("worker", id, "take", url)
 			err := pingAddress(url)
 			if err != nil {
-				fmt.Println("Error pinging:", err)
+				logrus.Errorln("Error pinging:", err)
 			}
-			// time.Sleep(time.Second)
 		}
 	}
 }
@@ -115,14 +113,22 @@ func crawlWeb(pingerCh chan string, ctx context.Context) {
 			go worker(w, pingerCh, &wg, ctx)
 		}
 		wg.Wait()
-		// fmt.Println("wDone")
 	}()
 }
 
 func main() {
 
+	cnfg = config.ParseConfig("config/config.yaml")
+
+	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+	logrus.SetLevel(logrus.Level(cnfg.Level))
+
 	cntx, cancel := context.WithCancel(context.Background())
 	jobs := make(chan string)
+
+	logrus.Debugf("Configuration loaded: %+v\n", cntx)
 
 	go func() {
 		exit := make(chan os.Signal, 1)
@@ -134,7 +140,9 @@ func main() {
 
 	crawlWeb(jobs, cntx)
 	ticker := time.NewTicker(20 * time.Second)
-	fmt.Println("ticker!")
+
+	logrus.Debugln("ticker!")
+
 	defer ticker.Stop()
 	for range ticker.C {
 
@@ -143,50 +151,56 @@ func main() {
 			client.WithVersion("1.41"),
 		)
 		if err != nil {
-			fmt.Println(err)
+			logrus.Errorln(err)
 			return
 		}
-		fmt.Printf("%v\n", cli)
+
+		logrus.Debugf("Client: %+v\n", cli)
 
 		containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{
 			Filters: filters.NewArgs(filters.Arg("status", "running")),
 		})
 		if err != nil {
-			fmt.Println(err)
+			logrus.Errorln(err)
 			return
 		}
 
-		fmt.Printf("faund %v containers\n", len(containers))
+		logrus.Debugf("faund %v containers\n", len(containers))
+
 		for _, c := range containers {
 
-			fmt.Printf("f %v container\n", c.Names)
-			// Получаем информацию о контейнере
-			inspect, err := cli.ContainerInspect(context.Background(), c.ID)
-			if err != nil {
-				fmt.Printf("Error inspecting %s: %v\n", c.ID[:12], err)
+			logrus.Debugf("f %v container\n", c.Names)
+
+			if strings.Index(c.Names[0], "docker-pinger") != -1 {
+				logrus.Debugln("oh... it`s me!?")
 				continue
 			}
-			// Получаем все IP-адреса контейнера
+
+			inspect, err := cli.ContainerInspect(context.Background(), c.ID)
+			if err != nil {
+				logrus.Errorf("Error inspecting %s: %v\n", c.ID[:12], err)
+				continue
+			}
+
 			var ips []string
 			for _, net := range inspect.NetworkSettings.Networks {
 				ips = append(ips, net.IPAddress)
 			}
 			numAddresses := len(ips)
 			if numAddresses == 0 {
-				fmt.Printf("%s: No IP addresses found\n", c.Names[0])
+				logrus.Warnf("%s: No IP addresses found\n", c.Names[0])
 				continue
 			}
 
-			fmt.Printf("f %v ip\n", ips)
+			logrus.Debugf("f %v ip\n", ips)
 
-			// Получаем первый экспознутый порт
-			exposedPorts := inspect.Config.ExposedPorts
+			exposedPorts := inspect.NetworkSettings.Ports
 			if len(exposedPorts) == 0 {
-				fmt.Printf("%s: No exposed ports\n", c.Names[0])
+				logrus.Warnf("%s: No exposed ports\n", c.Names[0])
 				continue
 			}
 
-			fmt.Printf("f %v exposedPorts\n", exposedPorts)
+			logrus.Debugf("f %v exposedPorts\n", exposedPorts)
 
 			var firstPort string
 			for port := range exposedPorts {
@@ -194,7 +208,7 @@ func main() {
 				break
 			}
 
-			fmt.Printf("f %v firstPort\n", firstPort)
+			logrus.Debugf("f %v %v:%v send for worker\n", c.Names[0], ips, firstPort)
 
 			go func(addresses []string) {
 				for j := range addresses {

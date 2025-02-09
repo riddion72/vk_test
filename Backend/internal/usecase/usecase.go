@@ -45,8 +45,6 @@ func (u *Usecase) GetPing(ctx context.Context, req model.GetAddressListRequest) 
 		return pings, err
 	}
 
-	// fmt.Println(req.Page, getLast(n, req.Limit))
-
 	pings.Last = getLast(n, req.Limit)
 	pings.Page = req.Page
 

@@ -7,11 +7,6 @@ import (
 	"net/http"
 	"strconv"
 
-	// "main/internal/models"
-	// rep "main/internal/repository"
-	// "main/internal/usecase"
-	// "main/pkg/postgres"
-
 	"backend/internal/http/handler/model"
 	"backend/internal/http/handler/tools"
 	"backend/internal/logger"
@@ -58,7 +53,6 @@ func (h *Handler) GetAddres(w http.ResponseWriter, r *http.Request) {
 	)
 
 	tmpl = template.Must(tmpl.ParseFiles(PATH_TO_INDEX))
-	// log.Println(res)
 
 	err = tmpl.Execute(w, *res)
 	if err != nil {
@@ -67,78 +61,6 @@ func (h *Handler) GetAddres(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-
-// func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
-// 	if usecase.Authorization(r.FormValue("login"), r.FormValue("password")) {
-// 		login := r.FormValue("login")
-// 		expirationDate := time.Now().Add(1 * time.Hour)
-// 		claims := jwt.MapClaims{
-// 			"exp":   expirationDate.Unix(),
-// 			"login": login,
-// 		}
-// 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-// 		tokenStr, err := token.SignedString(jwtKey)
-// 		if err != nil {
-// 			log.Println(err.Error())
-// 			http.Error(w, "JWT erorr", http.StatusInternalServerError)
-// 			return
-// 		}
-
-// 		http.SetCookie(w, &http.Cookie{
-// 			Name:    "token",
-// 			Value:   tokenStr,
-// 			Expires: expirationDate,
-// 		})
-
-// 		http.Redirect(w, r, "/admin_panel", http.StatusSeeOther)
-// 	}
-
-// 	tmpl := template.Must(template.ParseFiles(PATH_TO_AUTHO))
-// 	err := tmpl.Execute(w, nil)
-// 	if err != nil {
-// 		log.Println("Error execute tmpl: ", err)
-// 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	return
-// }
-
-// func (h *Handler) admin_panel(w http.ResponseWriter, r *http.Request) {
-// 	c, err := r.Cookie("token")
-// 	if err != nil {
-// 		if err == http.ErrNoCookie {
-// 			log.Println("No token")
-// 			http.Error(w, "No token", http.StatusUnauthorized)
-// 			return
-// 		}
-// 		log.Println(err.Error())
-// 		http.Error(w, "No Cookie?", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	token := c.Value
-// 	claims := jwt.MapClaims{}
-// 	tkn, err := jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
-// 		return jwtKey, nil
-// 	})
-// 	if err != nil {
-// 		if err == jwt.ErrSignatureInvalid {
-// 			log.Println("Wrong token")
-// 			http.Error(w, "Wrong token1", http.StatusUnauthorized)
-// 			return
-// 		}
-// 		log.Println(err.Error())
-// 		http.Error(w, "Wrong token2", http.StatusBadRequest)
-// 		return
-// 	}
-// 	if !tkn.Valid {
-// 		http.Error(w, "Wrong token3", http.StatusUnauthorized)
-// 		return
-// 	}
-
-// 	http.ServeFile(w, r, PATH_TO_ADMIN)
-// }
 
 func (h *Handler) CreateAddres(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.CreateAddres"
@@ -163,7 +85,6 @@ func (h *Handler) CreateAddres(w http.ResponseWriter, r *http.Request) {
 		}
 
 		tools.SendResponse(w, http.StatusOK, http.StatusOK)
-		// http.ServeFile(w, r, PATH_TO_ADMIN)
 	}
 }
 

@@ -1,8 +1,5 @@
-FROM alpine:latest
+FROM nginx:alpine
 
-LABEL description="A container that prints in an infinite loop"
+COPY . /usr/share/nginx/html/
 
-EXPOSE 1234
-EXPOSE 1235
-
-CMD while true; do echo "Hello VK"; sleep 1; done
+EXPOSE 80
